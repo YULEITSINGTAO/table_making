@@ -1,0 +1,49 @@
+#!/usr/bin/env Rscript
+args = commandArgs(trailingOnly=TRUE)
+if (length(args)==0) {
+  stop("At least one argument must be supplied (input file).n", call.=FALSE)
+}
+input_kallisto_folder <- args[1]
+tpm <- args[2]
+reference <- args[3]
+
+
+
+setwd(input_kallisto_folder)
+input_files <- list.files(pattern='tsv$', recursive=TRUE,
+                          full.names = TRUE)
+library(stringr)
+files_name <- c()
+for (i in 1:length(input_files)){
+  a <- str_split(input_files[i], "/")
+  
+  files_name <- cbind(files_name,a[[1]][2])
+  
+  
+}
+print("Kallisto results names are:")
+print(files_name)
+
+files_name <- as.array(files_name)
+input_files_data <- lapply(input_files, read.table,header = TRUE)
+names(input_files_data) <- files_name
+
+tpm_table <- input_files_data[[files_name[1]]][tpm]
+
+for (i in 2:length(files_name)){
+  a <- input_files_data[[files_name[i]]][tpm]
+  tpm_table <- cbind(tpm_table,a)
+  
+  
+}
+
+tpm_table <- cbind(input_files_data[[files_name[1]]]['target_id'] , tpm_table)
+colnames(tpm_table) <- cbind('target_id', files_name) 
+setwd('..')
+go_table_go_term <- read.delim(reference)
+whole_table <- merge(tpm_table, go_table_go_term[,-c(3,4,5)], by = 'target_id', all = TRUE)
+whole_table <- unique(whole_table)
+GO_table <- whole_table[whole_table['domain'] != '',]
+write.table(whole_table, paste0('./Table_out/','whole.',tpm,'.tab'), append = FALSE, quote = FALSE, sep = "\t", dec = ".", row.names = FALSE, col.names = TRUE, na = '')
+write.table(GO_table, paste0('./Table_out/','GO.',tpm,'.tab'), append = FALSE, quote = FALSE, sep = "\t", dec = ".", row.names = FALSE, col.names = TRUE, na = '')
+
